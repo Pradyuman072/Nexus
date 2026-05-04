@@ -1,0 +1,13 @@
+# Ignore dependencies
+node_modules/
+web/node_modules/
+server/node_modules/
+
+# Ignore environment variables (Important for security!)
+.env
+.env.local
+server/.env
+
+# Ignore build files
+dist/
+.next/
