@@ -134,7 +134,7 @@ export default function Home() {
               NexusFlow
             </h1>
             <p className="text-[#a1a1aa] text-sm leading-relaxed">
-              High-performance task orchestrator. Dispatch background jobs and monitor their real-time execution.
+              Real-time dashboard for dispatching and monitoring BullMQ/Redis-backed jobs with priority levels.
             </p>
           </header>
           
