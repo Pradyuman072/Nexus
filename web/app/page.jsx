@@ -12,6 +12,7 @@ export default function Home() {
   const [inputPassword, setInputPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const silentRefresh = async () => {
@@ -36,6 +37,7 @@ export default function Home() {
     e.preventDefault();
     if (!inputName.trim() || !inputPassword.trim()) return;
     setAuthError('');
+    setIsLoading(true);
     try {
       const endpoint = isRegistering ? '/api/register' : '/api/login';
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${endpoint}`, {
@@ -54,6 +56,8 @@ export default function Home() {
     } catch (err) {
       console.error('Auth error', err);
       setAuthError('Network error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -97,9 +101,20 @@ export default function Home() {
             {authError && <p className="text-red-400 text-sm text-center">{authError}</p>}
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-indigo-500 to-violet-500 hover:brightness-110 text-white text-sm p-3.5 rounded-xl font-medium transition-all shadow-[0_0_15px_rgba(99,102,241,0.2)]"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-violet-500 hover:brightness-110 disabled:opacity-70 disabled:hover:brightness-100 text-white text-sm p-3.5 rounded-xl font-medium transition-all shadow-[0_0_15px_rgba(99,102,241,0.2)]"
             >
-              {isRegistering ? 'Create Account' : 'Enter Workspace'}
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  {isRegistering ? 'Creating Account...' : 'Authenticating...'}
+                </>
+              ) : (
+                isRegistering ? 'Create Account' : 'Enter Workspace'
+              )}
             </button>
             <p className="text-slate-400 text-sm text-center mt-4 cursor-pointer hover:text-slate-300" onClick={() => setIsRegistering(!isRegistering)}>
               {isRegistering ? 'Already have an account? Login' : 'Need an account? Register'}
