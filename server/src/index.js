@@ -11,11 +11,16 @@ import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
 import User from './models/User.js';
 import cookieParser from 'cookie-parser';
+import './worker.js';
 
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
+
+app.get('/', (req, res) => {
+  res.send('NexusFlow API Server is running and listening for jobs!');
+});
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
