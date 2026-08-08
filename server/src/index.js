@@ -177,7 +177,8 @@ const authenticateAPI = (req, res, next) => {
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", 
+    origin: true,
+    credentials: true,
     methods: ["GET", "POST", "DELETE"]
   }
 });
