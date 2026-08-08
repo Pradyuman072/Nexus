@@ -10,10 +10,12 @@ import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
 import User from './models/User.js';
+import cookieParser from 'cookie-parser';
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -60,7 +62,14 @@ app.post('/api/register', async (req, res) => {
     user.refreshTokens.push(refreshToken);
     await user.save();
 
-    res.status(201).json({ token: accessToken, refreshToken, userId: username });
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    res.status(201).json({ token: accessToken, userId: username });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -85,7 +94,14 @@ app.post('/api/login', async (req, res) => {
     user.refreshTokens.push(refreshToken);
     await user.save();
 
-    res.json({ token: accessToken, refreshToken, userId: username });
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    res.json({ token: accessToken, userId: username });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -94,7 +110,7 @@ app.post('/api/login', async (req, res) => {
 
 // Refresh token route
 app.post('/api/auth/refresh', async (req, res) => {
-  const { refreshToken } = req.body;
+  const refreshToken = req.cookies.refreshToken;
   if (!refreshToken) return res.status(401).json({ error: 'Refresh token required' });
 
   try {
@@ -112,7 +128,14 @@ app.post('/api/auth/refresh', async (req, res) => {
     user.refreshTokens.push(newRefreshToken);
     await user.save();
 
-    res.json({ token: newAccessToken, refreshToken: newRefreshToken });
+    res.cookie('refreshToken', newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    res.json({ token: newAccessToken, userId: user.username });
   } catch (err) {
     console.error('Refresh token error:', err);
     res.status(403).json({ error: 'Invalid refresh token' });
@@ -121,7 +144,7 @@ app.post('/api/auth/refresh', async (req, res) => {
 
 // Logout route
 app.post('/api/logout', async (req, res) => {
-  const { refreshToken } = req.body;
+  const refreshToken = req.cookies.refreshToken;
   if (!refreshToken) return res.status(400).json({ error: 'Refresh token required' });
 
   try {
@@ -131,6 +154,7 @@ app.post('/api/logout', async (req, res) => {
       user.refreshTokens = user.refreshTokens.filter(rt => rt !== refreshToken);
       await user.save();
     }
+    res.clearCookie('refreshToken');
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
@@ -293,5 +317,9 @@ app.delete('/api/tasks', authenticateAPI, async (req, res) => {
   }
 });
 
-const PORT = 3001;
-httpServer.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+const PORT = process.env.PORT || 3001;
+if (process.env.NODE_ENV !== 'test') {
+  httpServer.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+}
+
+export { app, httpServer };

@@ -29,7 +29,7 @@ afterAll(async () => {
 });
 
 describe('Auth Endpoints', () => {
-  let refreshToken;
+  let cookies;
 
   it('should register a new user', async () => {
     const res = await request(app)
@@ -38,7 +38,7 @@ describe('Auth Endpoints', () => {
     
     expect(res.status).toBe(201);
     expect(res.body.token).toBeDefined();
-    expect(res.body.refreshToken).toBeDefined();
+    expect(res.headers['set-cookie']).toBeDefined();
   });
 
   it('should login an existing user', async () => {
@@ -48,25 +48,25 @@ describe('Auth Endpoints', () => {
     
     expect(res.status).toBe(200);
     expect(res.body.token).toBeDefined();
-    expect(res.body.refreshToken).toBeDefined();
-    refreshToken = res.body.refreshToken;
+    expect(res.headers['set-cookie']).toBeDefined();
+    cookies = res.headers['set-cookie'];
   });
 
   it('should refresh token', async () => {
     const res = await request(app)
       .post('/api/auth/refresh')
-      .send({ refreshToken });
+      .set('Cookie', cookies);
     
     expect(res.status).toBe(200);
     expect(res.body.token).toBeDefined();
-    expect(res.body.refreshToken).toBeDefined();
-    refreshToken = res.body.refreshToken; // update for logout
+    expect(res.headers['set-cookie']).toBeDefined();
+    cookies = res.headers['set-cookie']; // update for logout
   });
 
   it('should reject invalid refresh token', async () => {
     const res = await request(app)
       .post('/api/auth/refresh')
-      .send({ refreshToken: 'invalid' });
+      .set('Cookie', ['refreshToken=invalid']);
     
     expect(res.status).toBe(403);
   });
@@ -74,14 +74,14 @@ describe('Auth Endpoints', () => {
   it('should logout and invalidate refresh token', async () => {
     const res = await request(app)
       .post('/api/logout')
-      .send({ refreshToken });
+      .set('Cookie', cookies);
     
     expect(res.status).toBe(200);
 
     // Try refreshing again with same token
     const refreshRes = await request(app)
       .post('/api/auth/refresh')
-      .send({ refreshToken });
+      .set('Cookie', cookies);
     
     expect(refreshRes.status).toBe(403);
   });

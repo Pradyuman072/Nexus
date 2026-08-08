@@ -16,8 +16,10 @@ jest.mock('../components/TaskMonitor', () => {
 
 describe('Dashboard (Home Component)', () => {
   beforeEach(() => {
-    localStorage.clear();
-    global.fetch = jest.fn();
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: 'Not authenticated' })
+    });
   });
 
   afterEach(() => {
@@ -30,21 +32,32 @@ describe('Dashboard (Home Component)', () => {
     expect(screen.getByPlaceholderText('Username')).toBeInTheDocument();
   });
 
-  it('renders dashboard when authenticated via localStorage', () => {
-    localStorage.setItem('nexus_token', 'fake-token');
-    localStorage.setItem('nexus_refresh_token', 'fake-refresh-token');
-    localStorage.setItem('nexus_user', 'testuser');
+  it('renders dashboard when silent refresh succeeds on mount', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ token: 'fake-token', userId: 'testuser' })
+    });
     
     render(<Home />);
-    expect(screen.getByText('NexusFlow')).toBeInTheDocument();
-    expect(screen.getByTestId('task-form')).toBeInTheDocument();
-    expect(screen.getByTestId('task-monitor')).toBeInTheDocument();
+    
+    await waitFor(() => {
+      expect(screen.getByText('NexusFlow')).toBeInTheDocument();
+      expect(screen.getByTestId('task-form')).toBeInTheDocument();
+      expect(screen.getByTestId('task-monitor')).toBeInTheDocument();
+    });
   });
 
   it('handles login successfully', async () => {
+    // First fetch is the silent refresh on mount (fail it so we stay on login page)
+    global.fetch.mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: 'No token' })
+    });
+    
+    // Second fetch is the actual login request
     global.fetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ token: 't1', refreshToken: 'r1', userId: 'user1' })
+      json: async () => ({ token: 't1', userId: 'user1' })
     });
 
     render(<Home />);

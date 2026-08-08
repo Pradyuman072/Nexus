@@ -7,7 +7,6 @@ import TaskMonitor from '@/components/TaskMonitor';
 
 export default function Home() {
   const [token, setToken] = useState(null);
-  const [refreshToken, setRefreshToken] = useState(null);
   const [username, setUsername] = useState('');
   const [inputName, setInputName] = useState('');
   const [inputPassword, setInputPassword] = useState('');
@@ -15,14 +14,22 @@ export default function Home() {
   const [authError, setAuthError] = useState('');
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('nexus_token');
-    const savedRefreshToken = localStorage.getItem('nexus_refresh_token');
-    const savedUser = localStorage.getItem('nexus_user');
-    if (savedToken && savedUser && savedRefreshToken) {
-      setToken(savedToken);
-      setRefreshToken(savedRefreshToken);
-      setUsername(savedUser);
-    }
+    const silentRefresh = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include'
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setToken(data.token);
+          setUsername(data.userId);
+        }
+      } catch (err) {
+        console.error('Silent refresh failed', err);
+      }
+    };
+    silentRefresh();
   }, []);
 
   const handleAuth = async (e) => {
@@ -34,15 +41,12 @@ export default function Home() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ username: inputName, password: inputPassword })
       });
       const data = await res.json();
       if (res.ok) {
-        localStorage.setItem('nexus_token', data.token);
-        localStorage.setItem('nexus_refresh_token', data.refreshToken);
-        localStorage.setItem('nexus_user', data.userId);
         setToken(data.token);
-        setRefreshToken(data.refreshToken);
         setUsername(data.userId);
       } else {
         setAuthError(data.error || 'Authentication failed');
@@ -54,22 +58,15 @@ export default function Home() {
   };
 
   const handleLogout = async () => {
-    if (refreshToken) {
-      try {
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/logout`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken })
-        });
-      } catch (e) {
-        console.error('Logout error', e);
-      }
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (e) {
+      console.error('Logout error', e);
     }
-    localStorage.removeItem('nexus_token');
-    localStorage.removeItem('nexus_refresh_token');
-    localStorage.removeItem('nexus_user');
     setToken(null);
-    setRefreshToken(null);
     setUsername('');
   };
 
