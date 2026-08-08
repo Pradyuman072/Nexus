@@ -65,11 +65,11 @@ export default function TaskForm({ token }) {
   };
 
   return (
-    <div className="bg-[#141416] border border-white/10 p-8 rounded-2xl relative overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.3)]">
+    <div className="bg-[#141416]/60 backdrop-blur-xl border border-white/10 hover:border-white/20 p-8 rounded-2xl relative overflow-hidden transition-all shadow-[inset_0_0_20px_rgba(255,255,255,0.02)]">
       <form onSubmit={handleSubmit} className="relative z-10 space-y-6">
         <div>
-          <h2 className="text-xl font-semibold text-[#fafafa] mb-1 tracking-tight">Dispatch New Task</h2>
-          <p className="text-sm text-[#a1a1aa]">Add a job to the distributed queue.</p>
+          <h2 className="text-xl font-semibold text-white mb-1 tracking-tight">Dispatch New Task</h2>
+          <p className="text-sm text-zinc-400">Add a job to the distributed queue.</p>
         </div>
         
         <div className="space-y-4">
@@ -97,7 +97,7 @@ export default function TaskForm({ token }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-violet-500 hover:brightness-110 text-white p-4 rounded-xl text-sm font-medium transition-all shadow-[0_0_15px_rgba(99,102,241,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-violet-500 hover:brightness-110 text-white p-4 rounded-xl text-sm font-medium transition-all shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)] hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[0_0_15px_rgba(99,102,241,0.3)]"
           >
             {loading ? (
               <>

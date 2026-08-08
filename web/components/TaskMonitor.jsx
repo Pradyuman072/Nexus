@@ -64,11 +64,12 @@ export default function TaskMonitor({ token, onReady }) {
     };
 
     return (
-        <div className="bg-[#141416] border border-white/10 rounded-2xl overflow-hidden flex flex-col h-full shadow-[0_1px_3px_rgba(0,0,0,0.3)]">
-            <div className="bg-[#141416] px-6 py-5 border-b border-white/5 flex justify-between items-center">
+        <div className="bg-[#141416]/60 backdrop-blur-xl border border-white/10 hover:border-white/20 transition-all rounded-2xl overflow-hidden flex flex-col h-full shadow-[inset_0_0_20px_rgba(255,255,255,0.02)] relative">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 bg-[length:200%_auto] animate-[gradient_3s_linear_infinite]" />
+            <div className="bg-[#141416]/40 px-6 py-5 border-b border-white/5 flex justify-between items-center relative z-10">
                 <div className="flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-[#a1a1aa]" />
-                    <h3 className="text-sm font-semibold text-[#fafafa] tracking-tight">Live Execution Log</h3>
+                    <Activity className="w-5 h-5 text-indigo-400" />
+                    <h3 className="text-sm font-semibold text-white tracking-tight">Live Execution Log</h3>
                 </div>
                 <button 
                     onClick={clearQueue}
@@ -105,9 +106,9 @@ export default function TaskMonitor({ token, onReady }) {
                     return (
                         <div key={task.id} className="p-5 flex justify-between items-center hover:bg-white/5 transition-colors group">
                             <div className="flex-1 min-w-0 pr-4">
-                                <p className="text-sm font-medium text-[#fafafa] truncate">{task.title}</p>
+                                <p className="text-sm font-medium text-white truncate">{task.title}</p>
                                 <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-xs text-[#a1a1aa] font-mono">
+                                    <span className="text-xs text-zinc-500 font-mono group-hover:text-zinc-400 transition-colors">
                                         ID: {task.id}
                                     </span>
                                 </div>

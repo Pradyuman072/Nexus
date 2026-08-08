@@ -189,11 +189,14 @@ export default function Home() {
           
           <TaskForm token={token} />
           
-          <div className="bg-[#141416] border border-white/10 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] flex items-center space-x-4">
+          <div className="bg-[#141416]/60 backdrop-blur-xl border border-white/10 hover:border-white/20 p-6 rounded-2xl shadow-[inset_0_0_20px_rgba(255,255,255,0.02)] transition-all flex items-center space-x-4">
             <Activity className="w-5 h-5 text-indigo-500" />
             <div>
-              <p className="text-sm font-medium text-[#fafafa]">System Status: Active</p>
-              <p className="text-xs text-[#a1a1aa] mt-1">Workers are polling the Redis queue.</p>
+              <p className="text-sm font-medium text-white flex items-center gap-2">
+                System Status: Active
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              </p>
+              <p className="text-xs text-zinc-400 mt-1">Workers are polling the Redis queue.</p>
             </div>
           </div>
         </div>
