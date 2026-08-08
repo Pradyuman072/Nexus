@@ -3,6 +3,7 @@ import { Plus, AlertTriangle, Loader2 } from 'lucide-react';
 
 export default function TaskForm({ token }) {
   const [title, setTitle] = useState('');
+  const [priority, setPriority] = useState('Normal');
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState(null);
 
@@ -46,7 +47,7 @@ export default function TaskForm({ token }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` 
         },
-        body: JSON.stringify({ title, priority: 'High' }),
+        body: JSON.stringify({ title, priority }),
       });
 
       if (response.ok) {
@@ -72,14 +73,26 @@ export default function TaskForm({ token }) {
         </div>
         
         <div className="space-y-4">
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g., Process video rendering..."
-            className="w-full p-4 bg-[#0a0a0b] border border-white/10 rounded-xl text-sm text-[#fafafa] outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-colors"
-            required
-          />
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g., Process video rendering..."
+              className="flex-1 p-4 bg-[#0a0a0b] border border-white/10 rounded-xl text-sm text-[#fafafa] outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-colors"
+              required
+            />
+            <select
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+              className="p-4 bg-[#0a0a0b] border border-white/10 rounded-xl text-sm text-[#fafafa] outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-colors cursor-pointer"
+            >
+              <option value="Low">Low</option>
+              <option value="Normal">Normal</option>
+              <option value="High">High</option>
+              <option value="Urgent">Urgent</option>
+            </select>
+          </div>
           
           <button
             type="submit"
