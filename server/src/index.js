@@ -73,6 +73,7 @@ app.post('/api/register', async (req, res) => {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd ? 'none' : 'strict',
+      partitioned: isProd,
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
@@ -105,6 +106,7 @@ app.post('/api/login', async (req, res) => {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd ? 'none' : 'strict',
+      partitioned: isProd,
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
@@ -139,6 +141,7 @@ app.post('/api/auth/refresh', async (req, res) => {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd ? 'none' : 'strict',
+      partitioned: isProd,
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
