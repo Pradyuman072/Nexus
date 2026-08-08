@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Activity, LogOut } from 'lucide-react';
 import TaskForm from '@/components/TaskForm';
 import TaskMonitor from '@/components/TaskMonitor';
+import DashboardLoader from '@/components/DashboardLoader';
+import AnimatedBackground from '@/components/AnimatedBackground';
 
 export default function Home() {
   const [token, setToken] = useState(null);
@@ -13,6 +15,35 @@ export default function Home() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [authError, setAuthError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Dashboard Transition State
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [socketReady, setSocketReady] = useState(false);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
+
+  // Derive if loader should be fully visible
+  const loaderVisible = isInitializing && (!socketReady || !minTimeElapsed);
+
+  // When loader completes, transition to dashboard
+  useEffect(() => {
+    if (!loaderVisible && isInitializing) {
+      setShowDashboard(true);
+      // Wait for fade out to complete before removing from DOM or fully resting
+      setTimeout(() => setIsInitializing(false), 300);
+    }
+  }, [loaderVisible, isInitializing]);
+
+  const handleAuthSuccess = (t, u) => {
+    setToken(t);
+    setUsername(u);
+    setIsInitializing(true);
+    setSocketReady(false);
+    setMinTimeElapsed(false);
+    setShowDashboard(false);
+    // Enforce a minimum loader duration of 800ms
+    setTimeout(() => setMinTimeElapsed(true), 800);
+  };
 
   useEffect(() => {
     const silentRefresh = async () => {
@@ -23,8 +54,7 @@ export default function Home() {
         });
         if (res.ok) {
           const data = await res.json();
-          setToken(data.token);
-          setUsername(data.userId);
+          handleAuthSuccess(data.token, data.userId);
         }
       } catch (err) {
         console.error('Silent refresh failed', err);
@@ -48,8 +78,7 @@ export default function Home() {
       });
       const data = await res.json();
       if (res.ok) {
-        setToken(data.token);
-        setUsername(data.userId);
+        handleAuthSuccess(data.token, data.userId);
       } else {
         setAuthError(data.error || 'Authentication failed');
       }
@@ -76,7 +105,9 @@ export default function Home() {
 
   if (!token) {
     return (
-      <main className="min-h-screen py-16 px-4 flex items-center justify-center bg-[#0a0a0b]">
+      <>
+      <AnimatedBackground />
+      <main className="min-h-screen py-16 px-4 flex items-center justify-center bg-transparent relative z-10">
         <div className="bg-[#141416] border border-white/10 p-10 rounded-2xl w-full max-w-md shadow-[0_1px_3px_rgba(0,0,0,0.3)]">
           <h1 className="text-2xl font-semibold text-[#fafafa] mb-8 text-center tracking-tight">
             NexusFlow {isRegistering ? 'Register' : 'Login'}
@@ -122,14 +153,20 @@ export default function Home() {
           </form>
         </div>
       </main>
+      </>
     );
   }
 
   return (
-    <main className="min-h-screen py-16 px-4 sm:px-6 lg:px-8 flex flex-col items-center bg-[#0a0a0b] relative overflow-hidden">
-      {/* Subtle top radial glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none"></div>
-
+    <>
+    <AnimatedBackground />
+    {isInitializing && <DashboardLoader isVisible={loaderVisible} />}
+    
+    <main 
+      className={`min-h-screen py-16 px-4 sm:px-6 lg:px-8 flex flex-col items-center bg-transparent relative overflow-hidden transition-all duration-300 transform ${
+        showDashboard ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+      }`}
+    >
       <div className="w-full max-w-5xl flex flex-col lg:flex-row gap-8 relative z-10">
         
         {/* Left Column - Dispatcher */}
@@ -163,10 +200,11 @@ export default function Home() {
 
         {/* Right Column - Monitor */}
         <div className="flex-[1.2] flex flex-col">
-          <TaskMonitor token={token} />
+          <TaskMonitor token={token} onReady={() => setSocketReady(true)} />
         </div>
 
       </div>
     </main>
+    </>
   );
 }

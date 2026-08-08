@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import { Activity, Trash2, CheckCircle2, XCircle, AlertCircle, List, Loader2 } from 'lucide-react';
 
-export default function TaskMonitor({ token }) {
+export default function TaskMonitor({ token, onReady }) {
     const [tasks, setTasks] = useState([]);
     const [error, setError] = useState(false);
     const [errorMsg, setErrorMsg] = useState(null);
@@ -25,12 +25,14 @@ export default function TaskMonitor({ token }) {
             console.error("Socket connection error:", err);
             setError(true);
             setErrorMsg(err.message || 'Failed to connect to orchestrator.');
+            if (onReady) onReady();
         });
 
         socket.on('task_update', (data) => {
             setTasks(data);
             setError(false);
             setErrorMsg(null);
+            if (onReady) onReady();
         });
 
         socket.on('redis_error', (data) => {
