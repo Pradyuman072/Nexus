@@ -53,10 +53,14 @@ app.post('/api/register', async (req, res) => {
     if (existingUser) return res.status(400).json({ error: 'User already exists' });
 
     const user = new User({ username, password });
+    
+    const accessToken = jwt.sign({ userId: username }, JWT_SECRET, { expiresIn: '15m' });
+    const refreshToken = jwt.sign({ userId: username }, JWT_SECRET, { expiresIn: '7d' });
+    
+    user.refreshTokens.push(refreshToken);
     await user.save();
 
-    const token = jwt.sign({ userId: username }, JWT_SECRET, { expiresIn: '1d' });
-    res.status(201).json({ token, userId: username });
+    res.status(201).json({ token: accessToken, refreshToken, userId: username });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -75,10 +79,60 @@ app.post('/api/login', async (req, res) => {
     const isMatch = await user.comparePassword(password);
     if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
 
-    const token = jwt.sign({ userId: username }, JWT_SECRET, { expiresIn: '1d' });
-    res.json({ token, userId: username });
+    const accessToken = jwt.sign({ userId: username }, JWT_SECRET, { expiresIn: '15m' });
+    const refreshToken = jwt.sign({ userId: username }, JWT_SECRET, { expiresIn: '7d' });
+
+    user.refreshTokens.push(refreshToken);
+    await user.save();
+
+    res.json({ token: accessToken, refreshToken, userId: username });
   } catch (error) {
     console.error('Login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Refresh token route
+app.post('/api/auth/refresh', async (req, res) => {
+  const { refreshToken } = req.body;
+  if (!refreshToken) return res.status(401).json({ error: 'Refresh token required' });
+
+  try {
+    const decoded = jwt.verify(refreshToken, JWT_SECRET);
+    const user = await User.findOne({ username: decoded.userId });
+    
+    if (!user || !user.refreshTokens.includes(refreshToken)) {
+      return res.status(403).json({ error: 'Invalid refresh token' });
+    }
+
+    const newAccessToken = jwt.sign({ userId: user.username }, JWT_SECRET, { expiresIn: '15m' });
+    const newRefreshToken = jwt.sign({ userId: user.username }, JWT_SECRET, { expiresIn: '7d' });
+
+    user.refreshTokens = user.refreshTokens.filter(rt => rt !== refreshToken);
+    user.refreshTokens.push(newRefreshToken);
+    await user.save();
+
+    res.json({ token: newAccessToken, refreshToken: newRefreshToken });
+  } catch (err) {
+    console.error('Refresh token error:', err);
+    res.status(403).json({ error: 'Invalid refresh token' });
+  }
+});
+
+// Logout route
+app.post('/api/logout', async (req, res) => {
+  const { refreshToken } = req.body;
+  if (!refreshToken) return res.status(400).json({ error: 'Refresh token required' });
+
+  try {
+    const decoded = jwt.verify(refreshToken, JWT_SECRET, { ignoreExpiration: true });
+    const user = await User.findOne({ username: decoded.userId });
+    if (user) {
+      user.refreshTokens = user.refreshTokens.filter(rt => rt !== refreshToken);
+      await user.save();
+    }
+    res.json({ success: true });
+  } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
   }
 });

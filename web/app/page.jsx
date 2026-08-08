@@ -1,0 +1,160 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Activity, LogOut } from 'lucide-react';
+import TaskForm from '@/components/TaskForm';
+import TaskMonitor from '@/components/TaskMonitor';
+
+export default function Home() {
+  const [token, setToken] = useState(null);
+  const [refreshToken, setRefreshToken] = useState(null);
+  const [username, setUsername] = useState('');
+  const [inputName, setInputName] = useState('');
+  const [inputPassword, setInputPassword] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [authError, setAuthError] = useState('');
+
+  useEffect(() => {
+    const savedToken = localStorage.getItem('nexus_token');
+    const savedRefreshToken = localStorage.getItem('nexus_refresh_token');
+    const savedUser = localStorage.getItem('nexus_user');
+    if (savedToken && savedUser && savedRefreshToken) {
+      setToken(savedToken);
+      setRefreshToken(savedRefreshToken);
+      setUsername(savedUser);
+    }
+  }, []);
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    if (!inputName.trim() || !inputPassword.trim()) return;
+    setAuthError('');
+    try {
+      const endpoint = isRegistering ? '/api/register' : '/api/login';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: inputName, password: inputPassword })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('nexus_token', data.token);
+        localStorage.setItem('nexus_refresh_token', data.refreshToken);
+        localStorage.setItem('nexus_user', data.userId);
+        setToken(data.token);
+        setRefreshToken(data.refreshToken);
+        setUsername(data.userId);
+      } else {
+        setAuthError(data.error || 'Authentication failed');
+      }
+    } catch (err) {
+      console.error('Auth error', err);
+      setAuthError('Network error');
+    }
+  };
+
+  const handleLogout = async () => {
+    if (refreshToken) {
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/logout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken })
+        });
+      } catch (e) {
+        console.error('Logout error', e);
+      }
+    }
+    localStorage.removeItem('nexus_token');
+    localStorage.removeItem('nexus_refresh_token');
+    localStorage.removeItem('nexus_user');
+    setToken(null);
+    setRefreshToken(null);
+    setUsername('');
+  };
+
+  if (!token) {
+    return (
+      <main className="min-h-screen py-16 px-4 flex items-center justify-center bg-[#0a0a0b]">
+        <div className="bg-[#141416] border border-white/10 p-10 rounded-2xl w-full max-w-md shadow-[0_1px_3px_rgba(0,0,0,0.3)]">
+          <h1 className="text-2xl font-semibold text-[#fafafa] mb-8 text-center tracking-tight">
+            NexusFlow {isRegistering ? 'Register' : 'Login'}
+          </h1>
+          <form onSubmit={handleAuth} className="space-y-5">
+            <input
+              type="text"
+              value={inputName}
+              onChange={(e) => setInputName(e.target.value)}
+              placeholder="Username"
+              className="w-full p-3.5 bg-[#0a0a0b] border border-white/10 rounded-xl text-sm text-[#fafafa] outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+              required
+            />
+            <input
+              type="password"
+              value={inputPassword}
+              onChange={(e) => setInputPassword(e.target.value)}
+              placeholder="Password"
+              className="w-full p-3.5 bg-[#0a0a0b] border border-white/10 rounded-xl text-sm text-[#fafafa] outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+              required
+            />
+            {authError && <p className="text-red-400 text-sm text-center">{authError}</p>}
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-indigo-500 to-violet-500 hover:brightness-110 text-white text-sm p-3.5 rounded-xl font-medium transition-all shadow-[0_0_15px_rgba(99,102,241,0.2)]"
+            >
+              {isRegistering ? 'Create Account' : 'Enter Workspace'}
+            </button>
+            <p className="text-slate-400 text-sm text-center mt-4 cursor-pointer hover:text-slate-300" onClick={() => setIsRegistering(!isRegistering)}>
+              {isRegistering ? 'Already have an account? Login' : 'Need an account? Register'}
+            </p>
+          </form>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen py-16 px-4 sm:px-6 lg:px-8 flex flex-col items-center bg-[#0a0a0b] relative overflow-hidden">
+      {/* Subtle top radial glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+
+      <div className="w-full max-w-5xl flex flex-col lg:flex-row gap-8 relative z-10">
+        
+        {/* Left Column - Dispatcher */}
+        <div className="flex-1 flex flex-col space-y-6 lg:max-w-md">
+          <header className="mb-2 relative flex flex-col items-start">
+            <button onClick={handleLogout} className="absolute right-0 top-0 flex items-center gap-2 text-xs bg-[#141416] border border-white/10 text-zinc-400 px-3 py-1.5 rounded-lg hover:text-zinc-200 transition-colors shadow-sm">
+              <LogOut className="w-3 h-3" />
+              Logout
+            </button>
+            <div className="inline-block px-3 py-1 mb-4 rounded-full bg-zinc-800/50 border border-white/5 text-zinc-400 text-xs font-medium tracking-wide uppercase">
+              Distributed Architecture
+            </div>
+            <h1 className="text-4xl font-semibold text-[#fafafa] mb-3 tracking-tight">
+              NexusFlow
+            </h1>
+            <p className="text-[#a1a1aa] text-sm leading-relaxed">
+              High-performance task orchestrator. Dispatch background jobs and monitor their real-time execution.
+            </p>
+          </header>
+          
+          <TaskForm token={token} />
+          
+          <div className="bg-[#141416] border border-white/10 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] flex items-center space-x-4">
+            <Activity className="w-5 h-5 text-indigo-500" />
+            <div>
+              <p className="text-sm font-medium text-[#fafafa]">System Status: Active</p>
+              <p className="text-xs text-[#a1a1aa] mt-1">Workers are polling the Redis queue.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Monitor */}
+        <div className="flex-[1.2] flex flex-col">
+          <TaskMonitor token={token} />
+        </div>
+
+      </div>
+    </main>
+  );
+}
