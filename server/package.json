@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "node --watch src/index.js",
-    "worker": "node --watch src/worker.js",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
+    "worker": "node --watch src/worker.js"
   },
   "keywords": [],
   "author": "",
@@ -25,10 +24,5 @@
     "mongoose": "^9.9.1",
     "socket.io": "^4.8.3",
     "zod": "^3.23.8"
-  },
-  "devDependencies": {
-    "jest": "^29.7.0",
-    "mongodb-memory-server": "^11.2.0",
-    "supertest": "^7.2.2"
   }
 }
