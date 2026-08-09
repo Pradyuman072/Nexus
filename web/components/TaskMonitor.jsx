@@ -11,7 +11,7 @@ export default function TaskMonitor({ token, onReady }) {
     useEffect(() => {
         if (!token) return;
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         const socket = io(apiUrl, {
             auth: { token }
         });
@@ -47,7 +47,7 @@ export default function TaskMonitor({ token, onReady }) {
 
     const clearQueue = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/tasks`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tasks`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`

@@ -15,7 +15,7 @@ export default function TaskForm({ token }) {
   const sendErrorTask = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/tasks`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tasks`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -41,7 +41,7 @@ export default function TaskForm({ token }) {
     
     setLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/tasks`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tasks`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

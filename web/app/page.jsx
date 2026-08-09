@@ -48,7 +48,7 @@ export default function Home() {
   useEffect(() => {
     const silentRefresh = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/refresh`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/refresh`, {
           method: 'POST',
           credentials: 'include'
         });
@@ -70,7 +70,7 @@ export default function Home() {
     setIsLoading(true);
     try {
       const endpoint = isRegistering ? '/api/register' : '/api/login';
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}${endpoint}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -92,7 +92,7 @@ export default function Home() {
 
   const handleLogout = async () => {
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/logout`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/logout`, {
         method: 'POST',
         credentials: 'include'
       });
