@@ -1,5 +1,15 @@
 import { Worker } from 'bullmq';
+import IORedis from 'ioredis';
 import { connection } from './queue.js';
+
+// Create a separate Redis client for ad-hoc commands to avoid interfering with BullMQ's managed connection
+const redisClient = new IORedis({
+  host: process.env.REDIS_HOST,
+  port: Number(process.env.REDIS_PORT),
+  password: process.env.REDIS_PASSWORD,
+  maxRetriesPerRequest: null,
+  family: 4,
+});
 
 // We use Redis + TTL for idempotency instead of an in-memory Set or MongoDB because:
 // 1. Fast in-memory lookup (Redis is much faster than querying MongoDB).
@@ -10,7 +20,7 @@ const worker = new Worker('nexus-tasks', async (job) => {
 
   // 1. Idempotency Check using Redis
   const idempotencyKey = `processed:${job.id}`;
-  const alreadyProcessed = await connection.get(idempotencyKey);
+  const alreadyProcessed = await redisClient.get(idempotencyKey);
   
   if (alreadyProcessed) {
     console.log(`Job ${job.id} was already processed. Skipping to avoid duplicate side effects.`);
@@ -32,7 +42,7 @@ const worker = new Worker('nexus-tasks', async (job) => {
   await new Promise(res => setTimeout(res, 3000));
   
   // Mark as processed in Redis with a 24-hour TTL (86400 seconds)
-  await connection.set(idempotencyKey, '1', 'EX', 86400);
+  await redisClient.set(idempotencyKey, '1', 'EX', 86400);
   console.log(`Task ${job.id} completed!`);
 
 }, { 
