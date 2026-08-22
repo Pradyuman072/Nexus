@@ -1,14 +1,18 @@
 import { Worker } from 'bullmq';
 import { connection } from './queue.js';
 
-// The store for processed jobs to ensure idempotency. In a real app this would be in DB/Redis.
-const processedJobs = new Set();
-
+// We use Redis + TTL for idempotency instead of an in-memory Set or MongoDB because:
+// 1. Fast in-memory lookup (Redis is much faster than querying MongoDB).
+// 2. Survives server restarts (unlike an in-memory Set).
+// 3. Avoids unbounded memory growth (TTL ensures old keys auto-expire).
 const worker = new Worker('nexus-tasks', async (job) => {
   console.log(`Processing task: ${job.data.title}`);
 
-  // 1. Idempotency Check
-  if (processedJobs.has(job.id)) {
+  // 1. Idempotency Check using Redis
+  const idempotencyKey = `processed:${job.id}`;
+  const alreadyProcessed = await connection.get(idempotencyKey);
+  
+  if (alreadyProcessed) {
     console.log(`Job ${job.id} was already processed. Skipping to avoid duplicate side effects.`);
     return;
   }
@@ -27,8 +31,8 @@ const worker = new Worker('nexus-tasks', async (job) => {
   // Simulate some async work
   await new Promise(res => setTimeout(res, 3000));
   
-  // Mark as processed
-  processedJobs.add(job.id);
+  // Mark as processed in Redis with a 24-hour TTL (86400 seconds)
+  await connection.set(idempotencyKey, '1', 'EX', 86400);
   console.log(`Task ${job.id} completed!`);
 
 }, { 
