@@ -208,21 +208,55 @@ io.use((socket, next) => {
   }
 });
 
+function getPriorityInt(priorityStr) {
+  switch (priorityStr?.toUpperCase()) {
+    case 'URGENT': return 1;
+    case 'HIGH': return 2;
+    case 'NORMAL': return 3;
+    case 'LOW': return 4;
+    default: return 3;
+  }
+}
+
+const mapJobsToResponse = async (jobs) => {
+  const sortedJobs = jobs.sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
+  return await Promise.all(sortedJobs.map(async job => {
+    const state = await job.getState();
+    let status = 'PENDING';
+    if (state === 'active') status = 'PROCESSING';
+    else if (state === 'delayed') status = job.attemptsMade > 0 ? 'RETRYING' : 'PENDING';
+    else if (state === 'completed') status = 'COMPLETED';
+    else if (state === 'failed') status = 'FAILED';
+
+    let nextRetryETA = null;
+    if (status === 'RETRYING' && job.finishedOn) {
+      const delayBase = job.opts.backoff?.delay || 5000;
+      const retryDelay = delayBase * Math.pow(2, job.attemptsMade - 1);
+      nextRetryETA = job.finishedOn + retryDelay;
+    }
+
+    return {
+      id: job.id,
+      title: job.data.title,
+      status,
+      priority: job.data.priority,
+      timestamp: job.timestamp,
+      attemptsMade: job.attemptsMade,
+      backoff: job.opts.backoff,
+      nextRetryETA
+    };
+  }));
+};
+
 const broadcastTasksToUser = async (userId) => {
   try {
     if (connection.status !== 'ready') throw new Error('Redis is not connected');
-    const jobs = await taskQueue.getJobs(['waiting', 'active', 'completed', 'failed'], 0, 99, false);
+    const jobs = await taskQueue.getJobs(['waiting', 'active', 'completed', 'failed', 'delayed'], 0, 99, false);
     
     // Filter jobs for this user
     const userJobs = jobs.filter(job => job.data.userId === userId);
     
-    const taskList = userJobs.map(job => ({
-      id: job.id,
-      title: job.data.title,
-      status: job.failedReason ? 'Failed' : (job.finishedOn ? 'Completed' : 'Processing'),
-      priority: job.data.priority,
-      timestamp: job.timestamp
-    })).sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
+    const taskList = await mapJobsToResponse(userJobs);
     
     io.to(userId).emit('task_update', taskList);
   } catch (err) {
@@ -251,9 +285,11 @@ const handleQueueEvent = async ({ jobId }) => {
 };
 
 queueEvents.on('added', handleQueueEvent);
+queueEvents.on('waiting', handleQueueEvent);
 queueEvents.on('active', handleQueueEvent);
 queueEvents.on('completed', handleQueueEvent);
 queueEvents.on('failed', handleQueueEvent);
+queueEvents.on('delayed', handleQueueEvent);
 
 io.on('connection', (socket) => {
   console.log(`Client connected: ${socket.id} (User: ${socket.user.userId})`);
@@ -271,9 +307,11 @@ app.post('/api/tasks', authenticateAPI, taskSubmitLimiter, async (req, res) => {
 
     if (connection.status !== 'ready') throw new Error('Redis is not connected');
     
+    const priorityInt = getPriorityInt(priority);
     const job = await taskQueue.add('new-task', 
       { title, priority, userId }, 
       {
+        priority: priorityInt,
         attempts: 3, 
         backoff: {
           type: 'exponential',
@@ -295,22 +333,44 @@ app.post('/api/tasks', authenticateAPI, taskSubmitLimiter, async (req, res) => {
 app.get('/api/tasks', authenticateAPI, async (req, res) => {
   try {
     if (connection.status !== 'ready') throw new Error('Redis is not connected');
-    const jobs = await taskQueue.getJobs(['waiting', 'active', 'completed', 'failed'], 0, 99, false);
+    const jobs = await taskQueue.getJobs(['waiting', 'active', 'completed', 'failed', 'delayed'], 0, 99, false);
     const userId = req.user.userId;
     const userJobs = jobs.filter(job => job.data.userId === userId);
     
-    const taskList = userJobs.map(job => ({
-      id: job.id,
-      title: job.data.title,
-      status: job.failedReason ? 'Failed' : (job.finishedOn ? 'Completed' : 'Processing'),
-      priority: job.data.priority,
-      timestamp: job.timestamp
-    })).sort((a, b) => b.timestamp - a.timestamp).slice(0, 5); 
+    const taskList = await mapJobsToResponse(userJobs); 
 
     res.json(taskList);
   } catch (error) {
     console.error('Failed to fetch tasks:', error.message);
     res.status(503).json({ error: 'Redis is currently unavailable' });
+  }
+});
+
+app.post('/api/demo-seed', authenticateAPI, taskSubmitLimiter, async (req, res) => {
+  try {
+    if (req.body.password !== 'Demo') {
+      return res.status(403).json({ error: 'Invalid demo password' });
+    }
+    const userId = req.user.userId;
+    const seedJobs = [
+      { title: 'URGENT - Fail 2 times', priority: 'Urgent', priorityInt: 1 },
+      { title: 'HIGH - Normal processing 1', priority: 'High', priorityInt: 2 },
+      { title: 'HIGH - Fail 1 time', priority: 'High', priorityInt: 2 },
+      { title: 'NORMAL - Normal processing 1', priority: 'Normal', priorityInt: 3 },
+      { title: 'NORMAL - Normal processing 2', priority: 'Normal', priorityInt: 3 },
+      { title: 'LOW - Normal processing', priority: 'Low', priorityInt: 4 }
+    ];
+    
+    for (const item of seedJobs) {
+      await taskQueue.add('new-task', 
+        { title: item.title, priority: item.priority, userId, isDemo: true }, 
+        { priority: item.priorityInt, attempts: 3, backoff: { type: 'exponential', delay: 5000 } }
+      );
+    }
+    res.json({ success: true, message: 'Demo batch seeded' });
+  } catch (error) {
+    console.error('Failed to seed demo tasks:', error.message);
+    res.status(503).json({ error: 'Failed to seed demo tasks' });
   }
 });
 

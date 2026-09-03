@@ -98,10 +98,17 @@ export default function TaskMonitor({ token, onReady }) {
                 
                 {!error && tasks.map((task) => {
                     let badgeClass = 'bg-white/5 text-[#a1a1aa]'; // default/queued
-                    if (task.status === 'Completed') badgeClass = 'bg-[#22c55e]/10 text-[#22c55e]';
-                    else if (task.status === 'Failed') badgeClass = 'bg-[#ef4444]/10 text-[#ef4444]';
-                    else if (task.status === 'Processing') badgeClass = 'bg-[#6366f1]/10 text-[#6366f1]';
-                    else if (task.status === 'Stalled' || task.status === 'Retrying') badgeClass = 'bg-amber-500/10 text-amber-500';
+                    if (task.status === 'COMPLETED') badgeClass = 'bg-[#22c55e]/10 text-[#22c55e]';
+                    else if (task.status === 'FAILED') badgeClass = 'bg-[#ef4444]/10 text-[#ef4444]';
+                    else if (task.status === 'PROCESSING') badgeClass = 'bg-[#6366f1]/10 text-[#6366f1]';
+                    else if (task.status === 'RETRYING') badgeClass = 'bg-amber-500/10 text-amber-500';
+                    else if (task.status === 'PENDING') badgeClass = 'bg-slate-400/10 text-slate-400';
+
+                    let etaText = '';
+                    if (task.status === 'RETRYING' && task.nextRetryETA) {
+                      const secondsLeft = Math.max(0, Math.ceil((task.nextRetryETA - Date.now()) / 1000));
+                      etaText = ` | Next retry in ~${secondsLeft}s`;
+                    }
 
                     return (
                         <div key={task.id} className="p-5 flex justify-between items-center hover:bg-white/5 transition-colors group">
@@ -111,14 +118,19 @@ export default function TaskMonitor({ token, onReady }) {
                                     <span className="text-xs text-zinc-500 font-mono group-hover:text-zinc-400 transition-colors">
                                         ID: {task.id}
                                     </span>
+                                    {task.attemptsMade > 0 && (
+                                      <span className="text-xs text-zinc-500">
+                                        • Attempt {task.attemptsMade}/3 {etaText}
+                                      </span>
+                                    )}
                                 </div>
                             </div>
                         
                             <div className="flex-shrink-0">
                                 <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${badgeClass}`}>
-                                    {task.status === 'Processing' && <Loader2 className="w-3 h-3 animate-spin" />}
-                                    {task.status === 'Completed' && <CheckCircle2 className="w-3 h-3" />}
-                                    {task.status === 'Failed' && <XCircle className="w-3 h-3" />}
+                                    {task.status === 'PROCESSING' && <Loader2 className="w-3 h-3 animate-spin" />}
+                                    {task.status === 'COMPLETED' && <CheckCircle2 className="w-3 h-3" />}
+                                    {task.status === 'FAILED' && <XCircle className="w-3 h-3" />}
                                     {task.status}
                                 </span>
                             </div>

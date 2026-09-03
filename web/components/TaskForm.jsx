@@ -113,15 +113,45 @@ export default function TaskForm({ token }) {
           </button>
         </div>
 
-        <div className="pt-5 border-t border-white/5">
+        <div className="pt-5 border-t border-white/5 flex gap-3">
           <button
             type="button"
             onClick={sendErrorTask}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-transparent border border-red-900/50 hover:bg-[#ef4444] hover:border-[#ef4444] text-[#ef4444] hover:text-white p-4 rounded-xl text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 flex items-center justify-center gap-2 bg-transparent border border-red-900/50 hover:bg-[#ef4444] hover:border-[#ef4444] text-[#ef4444] hover:text-white p-4 rounded-xl text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <AlertTriangle className="w-4 h-4" />
-            <span>Trigger Faulty Task (Simulate Retry)</span>
+            <span>Trigger Fault</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={async () => {
+              const pwd = window.prompt("Enter Demo Password:");
+              if (!pwd) return;
+
+              setLoading(true);
+              try {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/demo-seed`, { 
+                  method: 'POST', 
+                  headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                  },
+                  body: JSON.stringify({ password: pwd })
+                });
+                const data = await res.json();
+                if (res.ok) showStatus('Demo batch seeded!', 'success');
+                else showStatus(data.error || 'Failed to seed demo', 'error');
+              } catch (e) {
+                showStatus('Network error', 'error');
+              }
+              setLoading(false);
+            }}
+            disabled={loading}
+            className="flex-1 flex items-center justify-center gap-2 bg-transparent border border-amber-900/50 hover:bg-amber-500 hover:border-amber-500 text-amber-500 hover:text-white p-4 rounded-xl text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span>Seed Demo Batch</span>
           </button>
         </div>
 
