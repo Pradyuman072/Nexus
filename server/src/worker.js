@@ -83,6 +83,7 @@ const worker = new Worker('nexus-tasks', async (job) => {
   // If this process crashes, the interval dies with it — lock expires naturally at
   // the next TTL boundary. This is the CORRECT failure mode: a dead worker's
   // lock must expire so other workers can claim.
+  let lockLost = false;
   let heartbeatInterval = setInterval(async () => {
     try {
       const renewed = await redisClient.eval(
@@ -93,7 +94,8 @@ const worker = new Worker('nexus-tasks', async (job) => {
       } else {
         // Lock value didn't match our ownerToken — we lost the lock.
         // Log and stop renewing. Do not attempt to steal it back.
-        console.warn(`[${new Date().toISOString()}] Job ${job.id} claim lock renewal FAILED — lock no longer owned by this worker. Stopping renewal.`);
+        console.warn(`[${new Date().toISOString()}] Job ${job.id} claim lock renewal FAILED — lock no longer owned by this worker. Setting abort flag.`);
+        lockLost = true;
         clearInterval(heartbeatInterval);
         heartbeatInterval = null;
       }
@@ -115,6 +117,11 @@ const worker = new Worker('nexus-tasks', async (job) => {
       console.log(`[${new Date().toISOString()}] Self-healing successful! Completing task...`);
     }
 
+    if (lockLost) {
+      console.warn(`[${new Date().toISOString()}] Job ${job.id} — aborting after detecting lock was stolen. Discarding result.`);
+      return; 
+    }
+
     // Simulate some async work
     const isDemo = job.data.isDemo === true;
     if (isDemo) {
@@ -125,6 +132,12 @@ const worker = new Worker('nexus-tasks', async (job) => {
       await new Promise(res => setTimeout(res, delayMs));
     } else {
       await new Promise(res => setTimeout(res, 3000));
+    }
+
+    // CRITICAL: Check flag again after any await
+    if (lockLost) {
+      console.warn(`[${new Date().toISOString()}] Job ${job.id} — aborting after simulated work because lock was stolen. Discarding result.`);
+      return; // Do NOT write the idempotency marker. Do NOT complete normally.
     }
 
     // 4. Mark as processed in Redis with a 24-hour TTL (86400 seconds)
