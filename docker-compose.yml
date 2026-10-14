@@ -24,6 +24,17 @@ services:
       - mongo
       - redis
 
+  worker:
+    build:
+      context: ./server
+    command: npm run worker
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/nexus-flow
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - mongo
+      - redis
+
   redis:
     image: redis:alpine
     volumes:

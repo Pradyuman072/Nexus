@@ -11,7 +11,12 @@ import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
 import User from './models/User.js';
 import cookieParser from 'cookie-parser';
-import './worker.js';
+
+// Worker is decoupled to run in its own dedicated process (e.g., `npm run worker` or a separate container).
+// Set RUN_EMBEDDED_WORKER=true only if you explicitly want to run both in a single local process.
+if (process.env.RUN_EMBEDDED_WORKER === 'true') {
+  import('./worker.js');
+}
 
 const app = express();
 app.use(cors({ origin: true, credentials: true }));

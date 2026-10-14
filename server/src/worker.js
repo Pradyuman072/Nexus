@@ -1,16 +1,22 @@
+import 'dotenv/config';
 import { Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import { randomUUID } from 'crypto';
 import { connection } from './queue.js';
 
 // Create a separate Redis client for ad-hoc commands to avoid interfering with BullMQ's managed connection
-const redisClient = new IORedis({
-  host: process.env.REDIS_HOST,
-  port: Number(process.env.REDIS_PORT),
-  password: process.env.REDIS_PASSWORD,
-  maxRetriesPerRequest: null,
-  family: 4,
-});
+const redisClient = process.env.REDIS_URL
+  ? new IORedis(process.env.REDIS_URL, {
+      maxRetriesPerRequest: null,
+      family: 4,
+    })
+  : new IORedis({
+      host: process.env.REDIS_HOST,
+      port: Number(process.env.REDIS_PORT),
+      password: process.env.REDIS_PASSWORD,
+      maxRetriesPerRequest: null,
+      family: 4,
+    });
 
 // ─── Heartbeat Renewal Constants ────────────────────────────────────────────
 // CLAIM_TTL_SEC: how long the claim lock lives before it expires on its own.

@@ -4,15 +4,24 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-export const connection = new IORedis({
-  host: process.env.REDIS_HOST,
-  port: Number(process.env.REDIS_PORT),
-  password: process.env.REDIS_PASSWORD,
-  maxRetriesPerRequest: null,
-  family: 4, // Force IPv4 to avoid Node 17+ DNS resolution issues
-});
+export const connection = process.env.REDIS_URL
+  ? new IORedis(process.env.REDIS_URL, {
+      maxRetriesPerRequest: null,
+      family: 4,
+    })
+  : new IORedis({
+      host: process.env.REDIS_HOST,
+      port: Number(process.env.REDIS_PORT),
+      password: process.env.REDIS_PASSWORD,
+      maxRetriesPerRequest: null,
+      family: 4, // Force IPv4 to avoid Node 17+ DNS resolution issues
+    });
 
-console.log(`Attempting to connect to Redis at ${process.env.REDIS_HOST}:${process.env.REDIS_PORT}...`);
+console.log(
+  process.env.REDIS_URL
+    ? `Attempting to connect to Redis at REDIS_URL...`
+    : `Attempting to connect to Redis at ${process.env.REDIS_HOST}:${process.env.REDIS_PORT}...`
+);
 
 connection.on('connect', () => {
   console.log('Successfully connected to Cloud Redis!');
